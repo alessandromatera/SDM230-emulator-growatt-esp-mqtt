@@ -15,6 +15,6 @@ In repo number 2 above, the Python code waits for a specific slave ID and a regi
 
 # ESP8266 (arduino) code
 You can find the code here:
-https://github.com/alessandromatera/SMD230-emulator-growatt-esp-mqtt/blob/main/esp8266_SDM230_emulator.ino
+https://github.com/alessandromatera/SDM230-emulator-growatt-esp-mqtt/blob/main/esp8266_SDM230_emulator.ino
 
 Enjoy!
