@@ -10,6 +10,10 @@ I was inspired by two projects:
 
 In my case, I pretty much converted the 2nd repo above and use it in the 1st repo configuration, so to have an ESP8266 which gets grid info from the shelly device and sends back the grid power - appropriately converted in Modbus - to the Growatt Inverter via an RS485 - TTL converter.
 
+# Hardware Connections
+
+![Hardware Connections](https://github.com/alessandromatera/SDM230-emulator-growatt-esp-mqtt/blob/main/Connections.png)
+
 # Unsolved Issues
 In repo number 2 above, the Python code waits for a specific slave ID and a registry address from the Modbus Master (inverter) before giving back the power readings. In my case didn't work with any address. So I decided to always give back power readings after a request from the Inverter.
 
