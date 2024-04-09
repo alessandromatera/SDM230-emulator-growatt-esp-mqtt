@@ -13,7 +13,7 @@ const float max_export_power = -300;  //should be higher than max export limit s
 
 const char* ssid = "Your SSID";
 const char* password = "YourWiFiPassword";
-const char* mqtt_server = "192.168.0.1"; //Your MQTT Server's IP
+const char* mqtt_server = "192.168.0.1";  //Your MQTT Server's IP
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -96,7 +96,7 @@ void reconnect() {
     // Attempt to connect
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
-      // please adjust the topic with your specific senttings. 
+      // please adjust the topic with your specific senttings.
       client.subscribe("shellies/device_name/emeter/0/power");
     } else {
       Serial.print("failed, rc=");
@@ -133,7 +133,8 @@ void setup() {
   digitalWrite(D0, LOW);
 }
 
- pinMode(D0, OUTPUT);  //HIGH TX, LOW RX
+void sendPowerToGrowatt() {
+  pinMode(D0, OUTPUT);  //HIGH TX, LOW RX
   digitalWrite(D0, LOW);
   delay(10);
   while (SoftSerial.available()) {
@@ -224,7 +225,6 @@ void setup() {
     memset(recbuffer, 0, sizeof(recbuffer));
     serialOK = true;
   }
- 
 }
 
 
@@ -241,8 +241,8 @@ void loop() {
   unsigned long currentMillis = millis();
 
   sendPowerToGrowatt();
-  
- if (currentMillis - previousMillis >= 60000) {
+
+  if (currentMillis - previousMillis >= 60000) {
     previousMillis = currentMillis;
 
     if (!receivedMessage) {
