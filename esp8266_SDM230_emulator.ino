@@ -7,6 +7,7 @@
 
 SoftwareSerial SoftSerial(D3, D2);
 
+const float max_export_power = -300;  //should be higher than max export limit set in the inverter
 
 // Update these with values suitable for your network.
 
@@ -20,8 +21,9 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE (50)
 char msg[MSG_BUFFER_SIZE];
 
-float gridpower = 100;
+float gridpower = max_export_power;
 bool receivedMessage = false;
+bool serialOK = false;
 
 
 uint16_t calc_crc(uint8_t* data, uint8_t length) {
@@ -78,6 +80,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   payload[length] = '\0';
   String message_buff = String((char*)payload);
   gridpower = message_buff.toInt();
+  char powerArray[8];  // Array di char di dimensione fissa
+  snprintf(powerArray, sizeof(powerArray), "%.2f", gridpower);
+  //client.publish("SDM230_growatt/gridpower", powerArray);
   receivedMessage = true;
 }
 
@@ -91,10 +96,8 @@ void reconnect() {
     // Attempt to connect
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
-      //client.publish("garage/temp", "start");
-      // ... and resubscribe
-      client.subscribe("shellies/contatore/emeter/0/power");
+      // please adjust the topic with your specific senttings. 
+      client.subscribe("shellies/device_name/emeter/0/power");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -111,7 +114,7 @@ void setup() {
 
   setup_wifi();
 
-    client.setServer(mqtt_server, 1883);
+  client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 
 
@@ -130,11 +133,10 @@ void setup() {
   digitalWrite(D0, LOW);
 }
 
-void sendPowerToGrowatt() {
-  pinMode(D0, OUTPUT);  //HIGH TX, LOW RX
+ pinMode(D0, OUTPUT);  //HIGH TX, LOW RX
   digitalWrite(D0, LOW);
   delay(10);
-  if (SoftSerial.available()) {
+  while (SoftSerial.available()) {
     static uint8_t recbuffer[8];
     static uint8_t recbufferIndex = 0;
 
@@ -168,7 +170,7 @@ void sendPowerToGrowatt() {
     Serial.println(wordsize);
 
 
-    //gridpower = -gridpower - 50 ;
+    //gridpower = -300;
     Serial.print("gridpower: ");
     Serial.println(gridpower);
 
@@ -178,11 +180,15 @@ void sendPowerToGrowatt() {
     response[1] = 0x04;
     response[2] = 0x04;
 
-    byte powerArray[4];
+    byte powerArray[4];  //4
+
+    if (gridpower > 1500) {
+      gridpower = 1500;
+    }
 
     memcpy(powerArray, &gridpower, sizeof(gridpower));
 
-// Inverti l'ordine dei byte se necessario (big endian)
+    // Inverti l'ordine dei byte se necessario (big endian)
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     {
       byte temp;
@@ -216,7 +222,9 @@ void sendPowerToGrowatt() {
     //}
 
     memset(recbuffer, 0, sizeof(recbuffer));
+    serialOK = true;
   }
+ 
 }
 
 
@@ -225,29 +233,48 @@ unsigned long previousMillis = 0;
 void loop() {
 
   if (!client.connected()) {
-    reconnect();
+    //reconnect();
+    ESP.restart();
   }
   client.loop();
 
   unsigned long currentMillis = millis();
 
   sendPowerToGrowatt();
-
-  if (currentMillis - previousMillis >= 60000) {
+  
+ if (currentMillis - previousMillis >= 60000) {
     previousMillis = currentMillis;
 
     if (!receivedMessage) {
-      gridpower = -100; //stops inverter if no communication from Shelly Device
+      gridpower = max_export_power;
+      char status[14] = "limited power";
+      client.publish("SDM230_growatt/inverter", status);
+    } else {
+      char status[3] = "OK";
+      client.publish("SDM230_growatt/inverter", status);
     }
 
     receivedMessage = false;
 
+    if (!serialOK) {
+      char status[4] = "BAD";
+      client.publish("SDM230_growatt/serial", status);
+      delay(100);
+      ESP.restart();
+    } else {
+      char status[3] = "OK";
+      client.publish("SDM230_growatt/serial", status);
+    }
+
+    serialOK = false;
+
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.print("Reconnecting to WiFi...");
-      WiFi.disconnect();
-      delay(500);
-      WiFi.reconnect();
-      delay(500);
+      //Serial.print("Reconnecting to WiFi...");
+      //WiFi.disconnect();
+      //delay(500);
+      //WiFi.reconnect();
+      //delay(500);
+      ESP.restart();
     }
 
 
